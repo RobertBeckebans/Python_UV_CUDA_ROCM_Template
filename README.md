@@ -1,5 +1,7 @@
 # TestPyTorch CUDA/ROCm with uv
 
+This is an example project showing how to run PyTorch with NVIDIA (CUDA) and AMD (ROCm) GPUs using `uv`.
+
 ## Setup
 
 This project uses `uv` extras to select the desired PyTorch backend.
