@@ -22,7 +22,7 @@ cuda = [
 rocm = [
     "torch ; sys_platform == 'linux'",
     "torchvision ; sys_platform == 'linux'",
-    "pytorch-triton-rocm>=3.1.0 ; sys_platform == 'linux'",
+    "triton-rocm ; sys_platform == 'linux'",
     "torch @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/torch-2.9.1%2Brocmsdk20260116-cp312-cp312-win_amd64.whl ; sys_platform == 'win32'",
     "torchvision @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/torchvision-0.24.1%2Brocmsdk20260116-cp312-cp312-win_amd64.whl ; sys_platform == 'win32'",
     "rocm_sdk_core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_core-7.2.0.dev0-py3-none-win_amd64.whl ; sys_platform == 'win32'",
@@ -51,7 +51,7 @@ explicit = true
 
 [[tool.uv.index]]
 name = "pytorch-rocm"
-url = "https://download.pytorch.org/whl/rocm6.4"
+url = "https://download.pytorch.org/whl/rocm7.1"
 explicit = true
 
 
@@ -67,6 +67,6 @@ torchvision = [
     { index = "pytorch-cu128", extra = "cuda" },
     { index = "pytorch-rocm", extra = "rocm", marker = "sys_platform == 'linux'" },
 ]
-pytorch-triton-rocm = [
+triton-rocm = [
     { index = "pytorch-rocm", extra = "rocm", marker = "sys_platform == 'linux'" },
 ]
