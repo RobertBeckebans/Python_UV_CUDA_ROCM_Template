@@ -6,6 +6,8 @@ This is an example project showing how to run PyTorch with NVIDIA (CUDA) and AMD
 
 This project uses `uv` extras to select the desired PyTorch backend.
 
+> **Python requirement:** Windows ROCm wheels from AMD are currently published for CPython 3.12, so this project targets Python 3.12 when using ROCm on Windows.
+
 ### CPU (default)
 ```/dev/null/shell#L1-1
 uv sync --extra cpu
@@ -18,12 +20,12 @@ uv sync --extra cuda
 
 > **Note:** CUDA availability depends on your NVIDIA driver/runtime. If `CUDA available: False`, install a compatible driver and verify CUDA is visible to Python.
 
-### ROCm (Linux only)
+### ROCm (Linux/Windows)
 ```/dev/null/shell#L1-1
 uv sync --extra rocm
 ```
 
-> **Note:** ROCm wheels are only available on Linux. On Windows, `uv sync --extra rocm` will fail because `pytorch-triton-rocm` is not published for Windows.
+> **Note:** On Linux, wheels come from the official PyTorch ROCm index. On Windows, ROCm wheels are provided by AMD’s ROCm Windows repository and currently target CPython 3.12.
 
 ## Testing
 
@@ -39,7 +41,7 @@ uv run test_pytorch.py
 uv run --extra cuda test_pytorch.py
 ```
 
-### ROCm (Linux only)
+### ROCm (Linux/Windows)
 ```/dev/null/shell#L1-1
 uv run --extra rocm test_pytorch.py
 ```

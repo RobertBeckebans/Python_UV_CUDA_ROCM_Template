@@ -3,7 +3,7 @@ name = "myproject"
 version = "1"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     # CPU fallback (default)
     "torch",
@@ -23,6 +23,11 @@ rocm = [
     "torch ; sys_platform == 'linux'",
     "torchvision ; sys_platform == 'linux'",
     "pytorch-triton-rocm>=3.1.0 ; sys_platform == 'linux'",
+    "torch @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/torch-2.9.1%2Brocmsdk20260116-cp312-cp312-win_amd64.whl ; sys_platform == 'win32'",
+    "torchvision @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/torchvision-0.24.1%2Brocmsdk20260116-cp312-cp312-win_amd64.whl ; sys_platform == 'win32'",
+    "rocm_sdk_core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_core-7.2.0.dev0-py3-none-win_amd64.whl ; sys_platform == 'win32'",
+    "rocm_sdk_libraries_custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_libraries_custom-7.2.0.dev0-py3-none-win_amd64.whl ; sys_platform == 'win32'",
+    "rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm-7.2.0.dev0.tar.gz ; sys_platform == 'win32'",
 ]
 
 [tool.uv]
@@ -48,6 +53,8 @@ explicit = true
 name = "pytorch-rocm"
 url = "https://download.pytorch.org/whl/rocm6.4"
 explicit = true
+
+
 
 [tool.uv.sources]
 torch = [
