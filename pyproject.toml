@@ -8,6 +8,7 @@ dependencies = [
     # CPU fallback (default)
     "torch",
     "torchvision",
+    "docling"
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,10 @@ rocm = [
     "rocm_sdk_core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_core-7.2.0.dev0-py3-none-win_amd64.whl ; sys_platform == 'win32'",
     "rocm_sdk_libraries_custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm_sdk_libraries_custom-7.2.0.dev0-py3-none-win_amd64.whl ; sys_platform == 'win32'",
     "rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2/rocm-7.2.0.dev0.tar.gz ; sys_platform == 'win32'",
+    # AMD's Windows torch wheels are built without distributed support
+    # (torch._C._distributed_c10d is missing). transformers 5.x imports
+    # torch.distributed.fsdp at module level and crashes; 4.x imports it lazily.
+    "transformers<5 ; sys_platform == 'win32'",
 ]
 
 [tool.uv]
