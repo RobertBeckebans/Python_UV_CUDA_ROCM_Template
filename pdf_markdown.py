@@ -4,12 +4,17 @@
 Lays a `.md` next to every `.pdf` (same stem, sibling file).  Skips PDFs that
 already have a newer `.md` unless `--force` is passed.
 
+With `--images referenced`, figures are written as PNGs into a sibling
+`<stem>_artifacts/` folder and linked from the Markdown; `--images embedded`
+inlines them as base64 data URIs instead.
+
 Usage:
     uv run tools/pdf_markdown.py [--force] <pdf-or-dir> [<pdf-or-dir> ...]
 
 Examples:
     uv run tools/pdf_markdown.py docs/ideas/Lightmaps2024/
     uv run tools/pdf_markdown.py --force docs/ideas/Lightmaps2024/HemiLighting-1.pdf
+    uv run tools/pdf_markdown.py --images referenced docs/ideas/Lightmaps2024/
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from functools import cache
 from pathlib import Path
 
 # Force UTF-8 stdout/stderr on Windows — the default cp1252 codec can't encode
@@ -27,7 +33,27 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
-def convert_one(pdf: Path, force: bool, formula_enrichment: bool) -> int:
+@cache
+def get_converter(formula_enrichment: bool, images: bool, image_scale: float):
+    # Lazy import — docling is heavy and only needed when we actually convert.
+    # Cached so the layout/OCR/formula models are loaded once, not per PDF.
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+
+    pipe_opts = PdfPipelineOptions(
+        do_formula_enrichment=formula_enrichment,
+        generate_picture_images=images,
+        images_scale=image_scale,
+    )
+    return DocumentConverter(
+        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipe_opts)}
+    )
+
+
+def convert_one(
+    pdf: Path, force: bool, formula_enrichment: bool, images: str, image_scale: float
+) -> int:
     if not pdf.is_file() or pdf.suffix.lower() != ".pdf":
         print(f"skip (not a pdf): {pdf}", file=sys.stderr)
         return 0
@@ -35,20 +61,26 @@ def convert_one(pdf: Path, force: bool, formula_enrichment: bool) -> int:
     if md.exists() and md.stat().st_mtime >= pdf.stat().st_mtime and not force:
         print(f"up-to-date: {md}")
         return 0
-    # Lazy import — docling is heavy and only needed when we actually convert.
-    from docling.document_converter import DocumentConverter, PdfFormatOption
-    from docling.datamodel.base_models import InputFormat
-    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling_core.types.doc import ImageRefMode
 
-    pipe_opts = PdfPipelineOptions(do_formula_enrichment=formula_enrichment)
-    converter = DocumentConverter(
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipe_opts)}
-    )
+    converter = get_converter(formula_enrichment, images != "none", image_scale)
     t0 = time.perf_counter()
     result = converter.convert(pdf)
-    md_text = result.document.export_to_markdown()
-    md.write_text(md_text, encoding="utf-8")
-    print(f"  {pdf} -> {md} ({len(md_text)} chars, {time.perf_counter() - t0:.1f} s)")
+    image_mode = {
+        "none": ImageRefMode.PLACEHOLDER,
+        "referenced": ImageRefMode.REFERENCED,
+        "embedded": ImageRefMode.EMBEDDED,
+    }[images]
+    # Writes the PNGs to <stem>_artifacts/ next to the .md in referenced mode.
+    # The dir must be passed relative, otherwise docling writes absolute links.
+    result.document.save_as_markdown(
+        md, artifacts_dir=Path(f"{md.stem}_artifacts"), image_mode=image_mode
+    )
+    n_pics = len(result.document.pictures)
+    print(
+        f"  {pdf} -> {md} ({md.stat().st_size} bytes, {n_pics} picture(s), "
+        f"{time.perf_counter() - t0:.1f} s)"
+    )
     return 1
 
 
@@ -84,6 +116,20 @@ def main() -> int:
         "Formula enrichment uses the CodeFormulaV2 VLM, which downloads a "
         "~1 GB model on first run.",
     )
+    ap.add_argument(
+        "--images",
+        choices=("none", "referenced", "embedded"),
+        default="none",
+        help="How to handle pictures: 'none' leaves an <!-- image --> "
+        "placeholder (default), 'referenced' writes PNGs to <stem>_artifacts/ "
+        "and links them, 'embedded' inlines them as base64.",
+    )
+    ap.add_argument(
+        "--image-scale",
+        type=float,
+        default=2.0,
+        help="Render scale for extracted pictures (1.0 = 72 dpi, default 2.0 = 144 dpi).",
+    )
     args = ap.parse_args()
     pdfs = iter_pdfs(args.inputs)
     if not pdfs:
@@ -92,7 +138,13 @@ def main() -> int:
     n = 0
     for pdf in pdfs:
         try:
-            n += convert_one(pdf, args.force, formula_enrichment=not args.no_formulas)
+            n += convert_one(
+                pdf,
+                args.force,
+                formula_enrichment=not args.no_formulas,
+                images=args.images,
+                image_scale=args.image_scale,
+            )
         except Exception as e:
             print(f"FAIL {pdf}: {e}", file=sys.stderr)
     print(f"converted {n}/{len(pdfs)} pdf(s)")
